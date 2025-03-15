@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: multi_form_db
+      MYSQL_USER: OmerMission
+      MYSQL_PASSWORD: omerMission1
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  server:
+    build: .
+    container_name: node_server
+    restart: always
+    depends_on:
+      - mysql
+    environment:
+      DB_HOST: mysql
+      DB_USER: OmerMission
+      DB_PASSWORD: omerMission1
+      DB_NAME: multi_form_db
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "node dist/scripts/setup-db.js && npm start"
+
+volumes:
+  mysql_data:

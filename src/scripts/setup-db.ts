@@ -4,47 +4,45 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const MAX_RETRIES = 5; // number of times to retry MySQL connection
+const RETRY_DELAY = 5000; // delay between retries
+
 const runMigrations = async () => {
-  try {
-    console.log("🔍 Connecting to MySQL with:");
-    console.log(
-      `Host: ${process.env.DB_HOST}, User: ${process.env.DB_USER}, Port: ${process.env.DB_PORT}`
-    );
+  let retries = 0;
+  while (retries < MAX_RETRIES) {
+    try {
+      console.log(`Attempting to connect to MySQL (Try: ${retries + 1})`);
+      const connection = await mysql.createConnection({
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        multipleStatements: true,
+      });
 
-    const connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      port: Number(process.env.DB_PORT) || 3306,
-      multipleStatements: true,
-    });
+      console.log("Connected to MySQL. Running migrations...");
 
-    console.log("✅ Connected to MySQL. Creating database if not exists...");
+      // Run schema.sql
+      const schemaSQL = fs.readFileSync("database/schema.sql", "utf8");
+      await connection.query(schemaSQL);
+      console.log("Database schema created.");
 
-    // ✅ Ensure the database exists before using it
-    await connection.query(
-      `CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`
-    );
-    await connection.query(`USE ${process.env.DB_NAME}`);
+      // Run seed.sql
+      const seedSQL = fs.readFileSync("database/seed.sql", "utf8");
+      await connection.query(seedSQL);
+      console.log("Initial data inserted.");
 
-    console.log("✅ Database selected. Running migrations...");
-
-    // ✅ Read and execute schema.sql
-    const schemaSQL = fs.readFileSync("database/schema.sql", "utf8");
-    await connection.query(schemaSQL);
-    console.log("✅ Database schema created.");
-
-    // ✅ Read and execute seed.sql
-    const seedSQL = fs.readFileSync("database/seed.sql", "utf8");
-    await connection.query(seedSQL);
-    console.log("✅ Initial data inserted.");
-
-    await connection.end();
-    console.log("✅ Database setup complete.");
-  } catch (error) {
-    console.error("❌ Error setting up database:", error);
+      await connection.end();
+      console.log("Database setup complete.");
+      return;
+    } catch (error) {
+      console.error("MySQL not ready yet, retrying...", error);
+      retries++;
+      await new Promise((res) => setTimeout(res, RETRY_DELAY));
+    }
   }
+  console.error("Failed to connect to MySQL after multiple attempts.");
 };
 
-// Run the function
+// Run the migration script
 runMigrations();
