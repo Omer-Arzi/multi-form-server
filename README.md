@@ -26,11 +26,11 @@ cd multi-form-server
 Create a **`.env`** file in the project root with the following content:
 
 ```ini
-DB_HOST=mysql
-DB_USER=OmerMission
-DB_PASSWORD=omerMission1
-DB_NAME=multi_form_db
-DB_PORT=3306
+DB_HOST=
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
+DB_PORT=
 ```
 
 > ⚠️ **Note for testers:** The default MySQL credentials are provided in `docker-compose.yml`. If you change them, update both the `.env` file and `docker-compose.yml`.
